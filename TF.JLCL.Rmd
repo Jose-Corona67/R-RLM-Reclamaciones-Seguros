@@ -1,0 +1,260 @@
+---
+title: "Proyecto Final Avance"
+author: "CHANTRES ARRIETA NIKOLE"
+date: "2024-10-08"
+output: html_document
+---
+
+Librerías a utilizar
+
+```{r}
+library(readxl)
+library(plm)
+library(tseries)
+library(dynlm)
+library(vars)
+library(nlWaldTest)
+library(lmtest)
+library(broom)
+library(car)
+library(sandwich)
+library(knitr)
+library(forecast)
+library(systemfit)
+library(AER)
+library(Matrix)
+library(texreg)
+library(nortest)
+library(car)
+library(lmtest)
+library(performance)
+```
+
+Importamos la base
+
+```{r}
+insurance_claims <- read_excel("/Users/josecoronalopez/Library/CloudStorage/OneDrive-BeneméritaUniversidadAutónomadePuebla/1. Actuaría/8. Octavo Semestre/3. Econometría I/7. Proyecto/insurance_claims.xlsx")
+```
+
+
+# Modelo 1
+
+```{r, warning=FALSE}
+mod1 <- lm(Y ~  X1+ X2 + X3 + X4 + X5 + X6 + X7 + X8 + X9 + X10 + X11 + X12 + X13 + X14 +  X15 + X16 + X17 + X18 , data = insurance_claims)
+summary(mod1)
+```
+
+
+Los errores parecen tener una distribución normal, no todas las variables son significativas, por lo que en el sigueinte análisis no tomaremos en cuenta algunas variables, además tenemos un $R^2=1$, lo que es extraño, entonces se trata de un sobre ajuste en los datos, esto es evidente porque son muchas variables.
+
+## Pruebas y estadísticas
+
+```{r, warning=FALSE}
+# Normalidad
+
+# H0: Los residuos siguen una distribución normal
+# H1: Los datos no siguen una distribución normal
+lillie.test(mod1$residuals)
+jarque.bera.test(mod1$residuals)
+# Como p-value < 0.05 rechazamos hipótesis nula
+# Entonces los errores no se distribuyen de forma normal
+# Observemos un gráfico
+hist(mod1$residuals, probability = T, breaks = 10)
+lines(density(mod1$residuals), lwd = 2, col = "red")
+curve(dnorm(x, mean(mod1$residuals), sd(mod1$residuals)), to = 5, from = -5  ,lwd = 2, col = "blue", add = T)
+jarque.bera.test(mod1$residuals)
+# Vemos que la densidad de los errores no va con la densidad que deberían tener
+# con su respectiva media y desviación
+
+# Autocorrelación
+# H0: No hay autocorrelación en los residuos
+# H1: Hay autocorrelación en los residuos
+# Usamos la prueba Durbin-Watson
+dwtest(mod1)
+# Como p-value < 0.05 rechazamos hipótesis nula
+# Por lo que tenemos autocorrelación
+
+# Heterocedasticidad
+# H0: Los errores tienen varianza constante
+# H1: Los errores no tienen varizan constante
+# Usamos la prueba Breusch-Pagan
+bptest(mod1)
+# Como p-value > 0.05 hay homocedasticidad
+plot(mod1, 1)
+# En el gráfico observamos que nuestros errores sí parecen estar alrededor del 0,
+# sin embargo, notamos algunos valores atípicos, por lo que pensaremos en tratarlos,
+# para que no nos den problemas
+
+# Colinealidad
+# Sabemos que si nuestro VIF > 10 tenemos problemas de colinealidad
+vif(mod1)
+# Notamos que tenemos problemas en alguna variables, tales como:
+# X1, X2, X7, X11, por lo que no tomaremos en cuenta esas variables para los 
+# siguientes modelos
+
+# AIC y BIC
+AIC(mod1)
+BIC(mod1)
+# A pesar de ser valores bajos, vamos observando que no es un buen modelo, por lo que
+# al final compararemos qué modelo tiene el mejor AIC y BIC
+
+# Prueba RESET
+# H0: El modelo está correctamente especificado (no hay omisiones 
+# importantes ni errores funcionales).
+# H1: El modelo está mal especificado (es decir, faltan variables o 
+# las relaciones no son lineales).
+resettest(mod1, power = 2, type = "fitted")
+# Como p-value > 0.05 entonces nuestro modelo está bien especificado
+
+# Conclusión
+# Al ser un modelo de primera instancia bueno porque tenemos un R2 = 1, no lo es,
+# debido a que tenemos sobreajuste, además de no pasar las pruebas de normalidad,
+# ni de autocorrelación y tener problemas de colinealidad, podrías usar metodologías
+# para solucionar el problema de normalidad, así como para ajustar los errores también
+```
+
+
+# Modelo 2
+ 
+```{r}
+mod2 <-  lm(Y ~ (X7) + (X15) +sqrt(X16) + sqrt(X17) +I(X11^2) + (X10), data = insurance_claims)
+summary(mod2)
+```
+ 
+## Pruebas y estadísticas
+
+```{r}
+# Normalidad
+# H0: Los residuos siguen una distribución normal
+# H1: Los datos no siguen una distribución normal
+lillie.test(mod2$residuals)
+jarque.bera.test(mod2$residuals)
+# Como p-value = 1.035e-06 rechazamos hipótesis nula
+# Entonces los errores no se distribuyen de forma normal
+# Observemos un gráfico
+hist(mod2$residuals, probability = T, breaks = 10)
+lines(density(mod2$residuals), lwd = 2, col = "red")
+curve(dnorm(x, mean(mod2$residuals), sd(mod2$residuals)), to = 5, from = -5  ,lwd = 2, col = "blue", add = T)
+# Vemos que la densidad de los errores no va con la densidad que deberían tener
+# con su respectiva media y desviación
+# Autocorrelación
+# H0: No hay autocorrelación en los residuos
+# H1: Hay autocorrelación en los residuos
+# Usamos la prueba Durbin-Watson
+dwtest(mod2)
+# Como p-value = 0.05616 No rechazamos hipótesis nula
+# Por lo que no tenemos autocorrelación
+# Heterocedasticidad
+# H0: Los errores tienen varianza constante
+# H1: Los errores no tienen varizan constante
+# Usamos la prueba Breusch-Pagan
+bptest(mod2)
+# Como p-value = 0.02551 hay homocedasticidad
+plot(mod2, 1)
+# En el gráfico observamos que nuestros errores se quedan consentrados en dos 
+# partes pero más alrededor del 0,
+# sin embargo, notamos algunos valores atípicos, por lo que pensaremos en tratarlos,
+# para que no nos den problemas
+# Colinealidad
+# Sabemos que si nuestro VIF > 10 tenemos problemas de colinealidad
+vif(mod2)
+# Notamos que no tenemos problemas en ninguna variable, las más altas son las 
+# variables X7, I(X11) pero aún así no pasan el 10
+# AIC y BIC
+AIC(mod2)
+BIC(mod2)
+# Vemos que son más altos que en el modelo 1, aún así 
+# al final compararemos qué modelo tiene el mejor AIC y BIC
+# Prueba RESET
+# H0: El modelo está correctamente especificado (no hay omisiones 
+# importantes ni errores funcionales).
+# H1: El modelo está mal especificado (es decir, faltan variables o 
+# las relaciones no son lineales).
+resettest(mod2, power = 2, type = "fitted")
+# Como p-value < 0.05 entonces nuestro modelo no está bien especificado
+
+ 
+```
+ 
+# Modelo 3
+ 
+```{r}
+mod3 <- lm(Y ~ sqrt(X3*X15) + I(X4*X16) + log(X11)+ exp(X12) +  log(X17) , data = insurance_claims)
+summary(mod3)
+```
+## Pruebas y estadísticas
+```{r}
+# Normalidad
+# H0: Los residuos siguen una distribución normal
+# H1: Los datos no siguen una distribución normal
+lillie.test(mod3$residuals)
+jarque.bera.test(mod3$residuals)
+# Como p-value = 6.362e-09 rechazamos hipótesis nula
+# Entonces los errores no se distribuyen de forma normal
+# Observemos un gráfico
+hist(mod3$residuals, probability = T, breaks = 10)
+lines(density(mod3$residuals), lwd = 2, col = "red")
+curve(dnorm(x, mean(mod3$residuals), sd(mod3$residuals)), to = 5, from = -5  ,lwd = 2, col = "blue", add = T)
+jarque.bera.test(mod3$residuals)
+# Parecen que si siguen una distribución normal pero la pruba dice lo contrario
+# Autocorrelación
+# H0: No hay autocorrelación en los residuos
+# H1: Hay autocorrelación en los residuos
+# Usamos la prueba Durbin-Watson
+dwtest(mod3)
+# Como p-value = 0.5774 No rechazamos hipótesis nula
+# Por lo que no tenemos autocorrelación
+# Heterocedasticidad
+# H0: Los errores tienen varianza constante
+# H1: Los errores no tienen varizan constante
+# Usamos la prueba Breusch-Pagan
+bptest(mod3)
+# Como p-value = 0.0003144 hay heterocedasticidad
+plot(mod3, 1)
+# En el gráfico observamos que nuestros errores tienen una tendencia que va 
+# incrementando pero se ven que van al rededor del 0, sin embargo,
+# notamos algunos valores atípicos, por lo que pensaremos en tratarlos,
+# para que no nos den problemas
+# Colinealidad
+# Sabemos que si nuestro VIF > 10 tenemos problemas de colinealidad
+vif(mod3)
+# Notamos que no tenemos problemas en ninguna variable
+# AIC y BIC
+AIC(mod3)
+BIC(mod3)
+# Vemos que son más altos que en el modelo 1 y 2, aún así 
+# al final compararemos qué modelo tiene el mejor AIC y BIC
+# Prueba RESET
+# H0: El modelo está correctamente especificado (no hay omisiones 
+# importantes ni errores funcionales).
+# H1: El modelo está mal especificado (es decir, faltan variables o 
+# las relaciones no son lineales).
+resettest(mod3, power = 2, type = "fitted")
+# Como p-value < 0.05 entonces nuestro modelo está mal especificado
+ 
+ 
+```
+
+
+# Modelo 4
+
+```{r, warning=FALSE}
+
+mod4 <- lm(log(Y) ~ X3 + (X4) + X6 + X15 + X16 - 1, data = insurance_claims)
+summary(mod4)
+jarque.bera.test(mod4$residuals)
+hist(mod4$residuals, probability = T, breaks = 10)
+lines(density(mod4$residuals), lwd = 2, col = "red")
+curve(dnorm(x, mean(mod4$residuals), sd(mod4$residuals)), to = 5, from = -5  ,lwd = 2, col = "blue", add = T)
+dwtest(mod4)
+bptest(mod4)
+vif(mod4)
+plot(mod4, 1)
+AIC(mod4)
+BIC(mod4)
+compare_performance(mod4,mod3, rank = T)
+plot(compare_performance(mod4,mod3, rank = T))
+```
+
+
+
