@@ -41,6 +41,6 @@ Proyecto final de Econometría I que desarrolla y valida múltiples modelos econ
 
 ## Autores
 
-Chantres Arrieta Nikole
-Corona López José Luis
+- Chantres Arrieta Nikole
+- Corona López José Luis
 
